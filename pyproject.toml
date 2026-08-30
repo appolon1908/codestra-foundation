@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codestra-foundation"
+version = "0.1.0"
+description = "Codestra Foundation Suite for shared tenant, identity, consent, billing, usage, and entitlement authority"
+requires-python = ">=3.10"
+dependencies = [
+  "alembic==1.16.5",
+  "cryptography==45.0.7",
+  "email-validator==2.3.0",
+  "fastapi==0.116.1",
+  "httpx==0.28.1",
+  "PyJWT[crypto]==2.10.1",
+  "psycopg[binary]==3.2.10",
+  "pydantic==2.11.7",
+  "SQLAlchemy==2.0.43",
+  "uvicorn[standard]==0.35.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==8.4.2",
+  "pytest-cov==6.2.1",
+  "ruff==0.12.11",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B008"]

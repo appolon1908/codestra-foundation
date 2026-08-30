@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.codestra.co/foundation/foundation-event.v1.schema.json",
+  "title": "Codestra Foundation Event v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "event_type",
+    "source",
+    "tenant_id",
+    "correlation_id",
+    "occurred_at",
+    "aggregate",
+    "data"
+  ],
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "foundation.billing.account-created.v1",
+        "foundation.consent.changed.v1",
+        "foundation.entitlement.changed.v1",
+        "foundation.invoice.created.v1",
+        "foundation.preference.changed.v1",
+        "foundation.profile.created.v1",
+        "foundation.profile.merged.v1",
+        "foundation.subscription.created.v1",
+        "foundation.tenant.changed.v1",
+        "foundation.tenant.created.v1",
+        "foundation.usage.recorded.v1"
+      ]
+    },
+    "source": { "const": "codestra-foundation" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "correlation_id": { "type": "string", "minLength": 8, "maxLength": 180 },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id"],
+      "properties": {
+        "type": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "id": { "type": "string", "format": "uuid" }
+      }
+    },
+    "data": { "type": "object" }
+  }
+}

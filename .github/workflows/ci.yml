@@ -1,0 +1,64 @@
+name: Foundation CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, development, staging]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.6-alpine
+        env:
+          POSTGRES_DB: foundation_test
+          POSTGRES_USER: foundation
+          POSTGRES_PASSWORD: foundation-test-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U foundation -d foundation_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      FOUNDATION_ENVIRONMENT: test
+      FOUNDATION_DATABASE_URL: postgresql+psycopg://foundation:foundation-test-only@127.0.0.1:5432/foundation_test
+      FOUNDATION_MUTATIONS_ENABLED: "true"
+      FOUNDATION_AUTO_CREATE_SCHEMA: "false"
+      FOUNDATION_JWT_ISSUER: https://auth.codestra.test/realms/codestra
+      FOUNDATION_JWT_AUDIENCE: codestra-foundation-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e '.[dev]'
+      - name: Static validation
+        run: |
+          ruff check app tests alembic
+          python -m compileall -q app tests alembic
+          python scripts/export_openapi.py --check
+      - name: Migration validation
+        run: |
+          export FOUNDATION_JWT_PUBLIC_KEY="unused-in-migration"
+          export FOUNDATION_FIELD_ENCRYPTION_KEY="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          export FOUNDATION_IDENTITY_HASH_KEY="AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="
+          alembic upgrade head
+          alembic check
+      - name: Tests
+        run: pytest
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compose validation
+        run: docker compose config --quiet
+      - name: Container build
+        run: docker build --pull -t codestra-foundation:${{ github.sha }} .
