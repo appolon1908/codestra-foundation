@@ -58,6 +58,18 @@ class EntitlementOut(StrictModel):
     updated_at: datetime
 
 
+class AccessDecisionOut(StrictModel):
+    tenant_id: str
+    suite_code: str
+    entitlement_key: str | None
+    allowed: bool
+    reason: str
+    tenant_status: str
+    billing_account_status: str | None
+    subscription_status: str | None
+    entitlement_enabled: bool | None
+
+
 class IdentityIn(StrictModel):
     kind: Literal["EMAIL", "PHONE", "EXTERNAL"]
     value: str = Field(min_length=1, max_length=320)
@@ -71,6 +83,23 @@ class IdentityOut(StrictModel):
     value: str
     verified_at: datetime | None
     primary: bool
+    status: str
+    version: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class IdentityPatch(StrictModel):
+    verified: bool | None = None
+    primary: bool | None = None
+    status: Literal["ACTIVE", "REVOKED"] | None = None
+    expected_version: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def nonempty(self):
+        if self.verified is None and self.primary is None and self.status is None:
+            raise ValueError("at_least_one_field_required")
+        return self
 
 
 class ProfileCreate(StrictModel):
@@ -106,6 +135,19 @@ class ProfileOut(StrictModel):
     updated_at: datetime
 
 
+class ProfilePatch(StrictModel):
+    external_ref: str | None = Field(default=None, max_length=180)
+    display_name: str | None = Field(default=None, max_length=200)
+    attributes: dict[str, Any] | None = None
+    expected_version: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def nonempty(self):
+        if not ({"external_ref", "display_name", "attributes"} & self.model_fields_set):
+            raise ValueError("at_least_one_field_required")
+        return self
+
+
 class ProfileResolve(StrictModel):
     identities: list[IdentityIn] = Field(min_length=1, max_length=20)
 
@@ -113,6 +155,16 @@ class ProfileResolve(StrictModel):
 class ProfileMergeRequest(StrictModel):
     target_profile_id: str = Field(min_length=36, max_length=36)
     reason: str = Field(min_length=3, max_length=500)
+
+
+class ProfileMergeOut(StrictModel):
+    id: str
+    tenant_id: str
+    source_profile_id: str
+    target_profile_id: str
+    actor_subject: str
+    reason: str
+    created_at: datetime
 
 
 class IdentityReference(StrictModel):
@@ -198,7 +250,25 @@ class BillingAccountOut(StrictModel):
     status: str
     tax_profile: dict[str, Any]
     external_customer_ref: str | None
+    version: int
     created_at: datetime
+    updated_at: datetime
+
+
+class BillingAccountPatch(StrictModel):
+    legal_name: str | None = Field(default=None, min_length=1, max_length=200)
+    billing_day: int | None = Field(default=None, ge=1, le=28)
+    status: Literal["ACTIVE", "PAST_DUE", "CLOSED"] | None = None
+    tax_profile: dict[str, Any] | None = None
+    external_customer_ref: str | None = Field(default=None, max_length=180)
+    expected_version: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def nonempty(self):
+        mutable = {"legal_name", "billing_day", "status", "tax_profile", "external_customer_ref"}
+        if not (mutable & self.model_fields_set):
+            raise ValueError("at_least_one_field_required")
+        return self
 
 
 class SubscriptionCreate(StrictModel):
@@ -213,6 +283,8 @@ class SubscriptionCreate(StrictModel):
 
     @model_validator(mode="after")
     def valid_period(self):
+        if self.period_start.tzinfo is None or self.period_end.tzinfo is None:
+            raise ValueError("billing_period_timezone_required")
         if self.period_end <= self.period_start:
             raise ValueError("period_end_must_follow_period_start")
         if self.status == "TRIALING" and self.trial_end is None:
@@ -231,7 +303,60 @@ class SubscriptionOut(StrictModel):
     period_start: datetime
     period_end: datetime
     trial_end: datetime | None
+    version: int
     created_at: datetime
+    updated_at: datetime
+
+
+class SubscriptionPatch(StrictModel):
+    plan_code: str | None = Field(default=None, pattern=r"^[A-Z][A-Z0-9_.-]{1,79}$")
+    status: Literal["TRIALING", "ACTIVE", "PAST_DUE", "SUSPENDED", "CANCELLED"] | None = None
+    quota_behavior: Literal["OVERAGE", "BLOCK", "AUTO_UPGRADE"] | None = None
+    period_start: datetime | None = None
+    period_end: datetime | None = None
+    trial_end: datetime | None = None
+    expected_version: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def nonempty(self):
+        mutable = {"plan_code", "status", "quota_behavior", "period_start", "period_end", "trial_end"}
+        if not (mutable & self.model_fields_set):
+            raise ValueError("at_least_one_field_required")
+        return self
+
+
+class UsageMeterCreate(StrictModel):
+    suite_code: str = Field(pattern=r"^[A-Z][A-Z0-9_]{1,79}$")
+    meter_code: str = Field(pattern=r"^[a-z][a-z0-9_.-]{1,119}$")
+    unit: str = Field(min_length=1, max_length=40)
+    aggregation: Literal["SUM", "MAX", "PASS_THROUGH"]
+    enabled: bool = True
+
+
+class UsageMeterPatch(StrictModel):
+    unit: str | None = Field(default=None, min_length=1, max_length=40)
+    aggregation: Literal["SUM", "MAX", "PASS_THROUGH"] | None = None
+    enabled: bool | None = None
+    expected_version: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def nonempty(self):
+        if self.unit is None and self.aggregation is None and self.enabled is None:
+            raise ValueError("at_least_one_field_required")
+        return self
+
+
+class UsageMeterOut(StrictModel):
+    id: str
+    tenant_id: str
+    suite_code: str
+    meter_code: str
+    unit: str
+    aggregation: str
+    enabled: bool
+    version: int
+    created_at: datetime
+    updated_at: datetime
 
 
 class UsageCreate(StrictModel):
@@ -259,6 +384,17 @@ class UsageOut(StrictModel):
     created_at: datetime
 
 
+class UsageSummaryOut(StrictModel):
+    tenant_id: str
+    suite_code: str
+    meter_code: str
+    unit: str
+    aggregation: str
+    quantity: Decimal
+    period_start: datetime
+    period_end: datetime
+
+
 class InvoiceLineIn(StrictModel):
     line_code: str = Field(min_length=1, max_length=120)
     description: str = Field(min_length=1, max_length=500)
@@ -278,6 +414,8 @@ class InvoiceCreate(StrictModel):
 
     @model_validator(mode="after")
     def valid_period(self):
+        if self.period_start.tzinfo is None or self.period_end.tzinfo is None:
+            raise ValueError("billing_period_timezone_required")
         if self.period_end <= self.period_start:
             raise ValueError("period_end_must_follow_period_start")
         return self
@@ -305,7 +443,14 @@ class InvoiceOut(StrictModel):
     tax_amount: Decimal
     total_amount: Decimal
     lines: list[InvoiceLineOut]
+    version: int
     created_at: datetime
+    updated_at: datetime
+
+
+class InvoiceStatusPatch(StrictModel):
+    status: Literal["DRAFT", "PENDING_PAYMENT", "ACTION_REQUIRED", "PAID", "PAST_DUE", "REFUNDED", "VOID"]
+    expected_version: int = Field(ge=1)
 
 
 class AuditOut(StrictModel):

@@ -1,0 +1,68 @@
+{
+  "contractVersion": "1.0.0",
+  "title": "Codestra Foundation API route catalogue v1",
+  "baseUrls": {
+    "local": "http://127.0.0.1:18100",
+    "container": "http://foundation-api:18100",
+    "production": null,
+    "productionStatus": "NOT_ASSIGNED_OR_DEPLOYED"
+  },
+  "rules": {
+    "authentication": "Bearer JWT with exact issuer, audience and algorithm validation unless scope is PUBLIC",
+    "effectfulHeaders": ["Authorization", "Idempotency-Key", "X-Correlation-ID"],
+    "deletion": "No hard-delete API exists for authoritative records; lifecycle state preserves history"
+  },
+  "routes": [
+    {"method":"GET","path":"/healthz","scope":"PUBLIC","effect":"READ","logic":"Liveness only; does not claim dependency readiness."},
+    {"method":"GET","path":"/readyz","scope":"PUBLIC","effect":"READ","logic":"Checks database, JWT, field encryption and enabled outbox configuration."},
+    {"method":"GET","path":"/version","scope":"PUBLIC","effect":"READ","logic":"Returns the service name and API version."},
+
+    {"method":"POST","path":"/v1/tenants","scope":"foundation.admin","effect":"MUTATION","logic":"Creates a unique tenant and atomically writes audit, outbox and encrypted idempotency records."},
+    {"method":"GET","path":"/v1/tenants","scope":"foundation.admin","effect":"READ","logic":"Lists tenants with status filtering and bounded pagination."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}","scope":"foundation.tenant.read","effect":"READ","logic":"Reads one tenant within the caller tenant boundary."},
+    {"method":"PATCH","path":"/v1/tenants/{tenant_id}","scope":"foundation.admin","effect":"MUTATION","logic":"Changes tenant name or lifecycle status with audit and event evidence."},
+    {"method":"PUT","path":"/v1/tenants/{tenant_id}/entitlements/{entitlement_key}","scope":"foundation.entitlement.write","effect":"MUTATION","logic":"Versioned entitlement upsert with effective and expiry validation."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/entitlements/{entitlement_key}","scope":"foundation.entitlement.read","effect":"READ","logic":"Reads one entitlement by canonical key."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/entitlements","scope":"foundation.entitlement.read","effect":"READ","logic":"Lists tenant entitlements with optional enabled filtering."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/access/{suite_code}","scope":"foundation.entitlement.read","effect":"READ","logic":"Combines tenant, billing-account, subscription and optional time-bounded entitlement state into a deny-by-default access decision."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/audit","scope":"foundation.audit.read","effect":"READ","logic":"Returns the latest 200 append-only, PII-free audit records."},
+
+    {"method":"POST","path":"/v1/tenants/{tenant_id}/profiles","scope":"foundation.profile.write","effect":"MUTATION","logic":"Creates an encrypted profile with one or more tenant-unique normalized identities."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/profiles","scope":"foundation.profile.read","effect":"READ","logic":"Lists profiles with bounded pagination and optional external-reference and merged-record filters."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/profiles/{profile_id}","scope":"foundation.profile.read","effect":"READ","logic":"Reads and decrypts one profile for an authorized tenant caller."},
+    {"method":"PATCH","path":"/v1/tenants/{tenant_id}/profiles/{profile_id}","scope":"foundation.profile.write","effect":"MUTATION","logic":"Optimistically updates encrypted profile fields; merged profiles are read-only."},
+    {"method":"POST","path":"/v1/tenants/{tenant_id}/profiles/resolve","scope":"foundation.profile.read","effect":"READ","logic":"Resolves active normalized identities to exactly one canonical profile and follows a merge pointer."},
+    {"method":"POST","path":"/v1/tenants/{tenant_id}/profiles/{profile_id}/identities","scope":"foundation.profile.write","effect":"MUTATION","logic":"Adds an encrypted tenant-unique identity and enforces one primary identity per kind."},
+    {"method":"PATCH","path":"/v1/tenants/{tenant_id}/profiles/{profile_id}/identities/{identity_id}","scope":"foundation.profile.write","effect":"MUTATION","logic":"Versioned verification, primary-selection or revocation; revoked identities cannot resolve or become primary."},
+    {"method":"POST","path":"/v1/tenants/{tenant_id}/profiles/{profile_id}/merge","scope":"foundation.profile.write","effect":"MUTATION","logic":"Moves identity and preference links once, marks the source read-only and records immutable merge evidence."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/profiles/{profile_id}/merges","scope":"foundation.profile.read","effect":"READ","logic":"Lists immutable merge history where the profile was source or target."},
+
+    {"method":"POST","path":"/v1/tenants/{tenant_id}/communications/consents","scope":"foundation.consent.write","effect":"MUTATION","logic":"Appends immutable consent evidence; denial or revocation forces an unsubscribe without downgrading history."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/communications/consents","scope":"foundation.consent.read","effect":"READ","logic":"Lists consent history for a normalized identity without exposing identity values in storage."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/communications/consents/{consent_id}","scope":"foundation.consent.read","effect":"READ","logic":"Reads one immutable consent event inside the tenant boundary."},
+    {"method":"PUT","path":"/v1/tenants/{tenant_id}/communications/preferences","scope":"foundation.preference.write","effect":"MUTATION","logic":"Versioned preference upsert; subscription requires an effective granted consent."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/communications/preferences","scope":"foundation.preference.read","effect":"READ","logic":"Lists preferences for a normalized identity with optional topic and channel filters."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/communications/preferences/{preference_id}","scope":"foundation.preference.read","effect":"READ","logic":"Reads one current preference inside the tenant boundary."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/communications/effective","scope":"foundation.preference.read","effect":"READ","logic":"Deny-by-default effective communication decision combining consent and preference precedence."},
+
+    {"method":"POST","path":"/v1/tenants/{tenant_id}/billing/accounts","scope":"foundation.billing.write","effect":"MUTATION","logic":"Creates a billing account with encrypted tax profile and immutable currency."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/billing/accounts","scope":"foundation.billing.read","effect":"READ","logic":"Lists tenant-owned billing accounts with status filtering."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/billing/accounts/{account_id}","scope":"foundation.billing.read","effect":"READ","logic":"Reads one billing account after explicit account ownership enforcement."},
+    {"method":"PATCH","path":"/v1/tenants/{tenant_id}/billing/accounts/{account_id}","scope":"foundation.billing.write","effect":"MUTATION","logic":"Versioned account update with ACTIVE, PAST_DUE and terminal CLOSED transition rules."},
+    {"method":"POST","path":"/v1/tenants/{tenant_id}/billing/subscriptions","scope":"foundation.billing.write","effect":"MUTATION","logic":"Creates one suite subscription per tenant and validates billing periods and trials."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/billing/subscriptions","scope":"foundation.billing.read","effect":"READ","logic":"Lists all suite subscriptions for the tenant."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/billing/subscriptions/{subscription_id}","scope":"foundation.billing.read","effect":"READ","logic":"Reads one tenant suite subscription."},
+    {"method":"PATCH","path":"/v1/tenants/{tenant_id}/billing/subscriptions/{subscription_id}","scope":"foundation.billing.write","effect":"MUTATION","logic":"Versioned plan, quota, period and lifecycle update with a terminal cancellation state."},
+    {"method":"POST","path":"/v1/tenants/{tenant_id}/billing/meters","scope":"foundation.billing.write","effect":"MUTATION","logic":"Registers a unique suite meter and its SUM, MAX or PASS_THROUGH aggregation contract."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/billing/meters","scope":"foundation.billing.read","effect":"READ","logic":"Lists registered meter definitions with suite and enabled filters."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/billing/meters/{meter_id}","scope":"foundation.billing.read","effect":"READ","logic":"Reads one tenant meter definition."},
+    {"method":"PATCH","path":"/v1/tenants/{tenant_id}/billing/meters/{meter_id}","scope":"foundation.billing.write","effect":"MUTATION","logic":"Versioned meter update or disablement; historical usage is never changed."},
+    {"method":"POST","path":"/v1/tenants/{tenant_id}/billing/usage","scope":"foundation.usage.write","effect":"MUTATION","logic":"Records append-only usage exactly once after account, subscription, suite and enabled-meter validation."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/billing/usage","scope":"foundation.billing.read","effect":"READ","logic":"Lists bounded raw usage with suite, meter and half-open period filters."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/billing/usage/summary","scope":"foundation.billing.read","effect":"READ","logic":"Aggregates a half-open period using each meter's declared SUM, MAX or PASS_THROUGH rule."},
+    {"method":"POST","path":"/v1/tenants/{tenant_id}/billing/invoices","scope":"foundation.billing.write","effect":"MUTATION","logic":"Creates one invoice per account period with line-level decimal rounding and recomputable totals."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/billing/invoices","scope":"foundation.billing.read","effect":"READ","logic":"Lists tenant-owned invoices with account and status filters."},
+    {"method":"GET","path":"/v1/tenants/{tenant_id}/billing/invoices/{invoice_id}","scope":"foundation.billing.read","effect":"READ","logic":"Reads an invoice and all immutable calculated lines after account ownership validation."},
+    {"method":"PATCH","path":"/v1/tenants/{tenant_id}/billing/invoices/{invoice_id}/status","scope":"foundation.billing.write","effect":"MUTATION","logic":"Versioned legal invoice transition; paid may become refunded, terminal refunded and void states cannot reopen."}
+  ]
+}
