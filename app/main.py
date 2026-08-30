@@ -22,7 +22,7 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(
     title="Codestra Foundation API",
-    version="0.1.0",
+    version="1.0.0",
     description=(
         "Shared tenant, profile, identity, consent, preference, billing, usage, and entitlement authority. "
         "Effectful cross-system calls remain governed by Codestra Middleware."

@@ -9,8 +9,8 @@
 - Impact: local container build could not start; no source compilation step failed
 - Mitigation: GitHub CI has an independent clean-runner container-build job
 - Resolution owner: server Docker credential administrator
-- Source-gate result: clean GitHub container build passed in run
-  `33322313703`; only this host's Docker credential repair remains
+- Source-gate result: clean GitHub container build passed for the v1 completion
+  source in run `33324025094`; only this host's Docker credential repair remains
 
 This does not authorize substituting an unpinned or unreviewed base image. The
 GitHub build result is required before the source gate is considered green.

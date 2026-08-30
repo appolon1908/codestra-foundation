@@ -15,11 +15,17 @@ Middleware remains the only privileged cross-system command boundary.
   idempotent response bodies
 - HMAC-indexed email, E.164 phone, and external identities
 - Deterministic identity resolution and audited profile merges
+- Versioned profile updates plus identity add, verification, primary-selection,
+  revocation, and merge-history readback
 - Append-only consent history and effective communication policy evaluation
 - Versioned communication preferences with fail-closed subscription rules
-- Billing accounts, multi-suite subscriptions, exact-once usage events, and
-  line-rounded invoices
+- Versioned billing accounts and multi-suite subscriptions with enforced state
+  machines
+- Registered SUM/MAX/PASS_THROUGH usage meters, exact-once usage events,
+  period summaries, line-rounded invoices, and invoice status transitions
 - Versioned entitlements and limits
+- Deny-by-default suite access decisions combining tenant, billing-account,
+  subscription, and optional entitlement state
 - JWT issuer/audience/scope validation and strict tenant isolation
 - Required idempotency and correlation headers for every mutation
 - Immutable audit records and transactional Middleware outbox events
@@ -27,30 +33,18 @@ Middleware remains the only privileged cross-system command boundary.
 - PostgreSQL migration with database-enforced append-only consent, usage, and
   audit tables
 
-The service is source-complete for this first vertical slice but is **not
+The v1 authority API is source-complete but is **not
 deployed**. Both mutations and outbound Middleware delivery default to disabled.
 Existing Klyrow records remain authoritative until the migration and cutover
 gates are explicitly approved.
 
 ## API
 
-The generated contract is [contracts/openapi.json](contracts/openapi.json).
-Primary resources:
-
-```text
-POST/PATCH /v1/tenants...
-GET/POST   /v1/tenants/{tenant_id}/profiles...
-POST       /v1/tenants/{tenant_id}/profiles/resolve
-POST/GET   /v1/tenants/{tenant_id}/communications/consents
-PUT        /v1/tenants/{tenant_id}/communications/preferences
-GET        /v1/tenants/{tenant_id}/communications/effective
-PUT/GET    /v1/tenants/{tenant_id}/entitlements/{key}
-POST/GET   /v1/tenants/{tenant_id}/billing/accounts...
-POST/GET   /v1/tenants/{tenant_id}/billing/subscriptions
-POST/GET   /v1/tenants/{tenant_id}/billing/usage
-POST/GET   /v1/tenants/{tenant_id}/billing/invoices...
-GET        /v1/tenants/{tenant_id}/audit
-```
+The generated OpenAPI contract is [contracts/openapi.json](contracts/openapi.json).
+Every method, path, required scope, effect classification, and business rule is
+listed in the generated [API catalogue](docs/API_CATALOGUE.md). Its source is
+[contracts/foundation-routes.v1.json](contracts/foundation-routes.v1.json), and
+CI proves that the route and scope sets exactly match the application source.
 
 All mutations require `Authorization`, `Idempotency-Key`, and
 `X-Correlation-ID`. A valid token does not bypass tenant or capability checks.

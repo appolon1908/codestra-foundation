@@ -91,6 +91,8 @@ class Identity(Base):
     __table_args__ = (
         UniqueConstraint("tenant_id", "kind", "value_hash", name="uq_identity_tenant_kind_hash"),
         CheckConstraint("kind IN ('EMAIL','PHONE','EXTERNAL')", name="ck_identity_kind"),
+        CheckConstraint("status IN ('ACTIVE','REVOKED')", name="ck_identity_status"),
+        CheckConstraint("version >= 1", name="ck_identity_version"),
         Index("ix_identity_lookup", "tenant_id", "kind", "value_hash"),
     )
 
@@ -102,7 +104,12 @@ class Identity(Base):
     value_enc: Mapped[str] = mapped_column(Text, nullable=False)
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="ACTIVE", nullable=False)
+    version: Mapped[int] = mapped_column(default=1, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )
 
     profile: Mapped[Profile] = relationship(back_populates="identities")
 
@@ -171,6 +178,7 @@ class BillingAccount(Base):
     __table_args__ = (
         CheckConstraint("billing_day BETWEEN 1 AND 28", name="ck_billing_day"),
         CheckConstraint("status IN ('ACTIVE','PAST_DUE','CLOSED')", name="ck_billing_account_status"),
+        CheckConstraint("version >= 1", name="ck_billing_account_version"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -181,7 +189,11 @@ class BillingAccount(Base):
     status: Mapped[str] = mapped_column(String(16), default="ACTIVE", nullable=False)
     tax_profile_enc: Mapped[str] = mapped_column(Text, nullable=False)
     external_customer_ref: Mapped[str | None] = mapped_column(String(180), nullable=True)
+    version: Mapped[int] = mapped_column(default=1, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )
 
 
 class SuiteSubscription(Base):
@@ -192,6 +204,7 @@ class SuiteSubscription(Base):
             "status IN ('TRIALING','ACTIVE','PAST_DUE','SUSPENDED','CANCELLED')", name="ck_subscription_status"
         ),
         CheckConstraint("quota_behavior IN ('OVERAGE','BLOCK','AUTO_UPGRADE')", name="ck_quota_behavior"),
+        CheckConstraint("version >= 1", name="ck_subscription_version"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -204,7 +217,33 @@ class SuiteSubscription(Base):
     period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     trial_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    version: Mapped[int] = mapped_column(default=1, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )
+
+
+class UsageMeter(Base):
+    __tablename__ = "usage_meters"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "suite_code", "meter_code", name="uq_meter_tenant_suite_code"),
+        CheckConstraint("aggregation IN ('SUM','MAX','PASS_THROUGH')", name="ck_meter_aggregation"),
+        CheckConstraint("version >= 1", name="ck_meter_version"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    suite_code: Mapped[str] = mapped_column(String(80), nullable=False)
+    meter_code: Mapped[str] = mapped_column(String(120), nullable=False)
+    unit: Mapped[str] = mapped_column(String(40), nullable=False)
+    aggregation: Mapped[str] = mapped_column(String(20), nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    version: Mapped[int] = mapped_column(default=1, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )
 
 
 class UsageEvent(Base):
@@ -238,6 +277,7 @@ class Invoice(Base):
             name="ck_invoice_status",
         ),
         CheckConstraint("total_amount >= 0", name="ck_invoice_total_nonnegative"),
+        CheckConstraint("version >= 1", name="ck_invoice_version"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -251,7 +291,11 @@ class Invoice(Base):
     credit_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     tax_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     total_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    version: Mapped[int] = mapped_column(default=1, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )
 
     lines: Mapped[list[InvoiceLine]] = relationship(back_populates="invoice", cascade="all, delete-orphan")
 

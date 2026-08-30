@@ -225,6 +225,22 @@ def list_consents(
     return [consent_out(row) for row in rows]
 
 
+@router.get("/consents/{consent_id}", response_model=ConsentOut)
+def get_consent(
+    tenant_id: str,
+    consent_id: str,
+    session: Session = Depends(db_session),
+    principal: Principal = Depends(current_principal),
+):
+    authorize(principal, tenant_id, "foundation.consent.read")
+    item = session.scalar(
+        select(ConsentEvent).where(ConsentEvent.tenant_id == tenant_id, ConsentEvent.id == consent_id)
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="consent_not_found")
+    return consent_out(item)
+
+
 @router.put("/preferences", response_model=PreferenceOut)
 def upsert_preference(
     tenant_id: str,
@@ -322,6 +338,47 @@ def upsert_preference(
         status_code=200,
         response=response,
     )
+
+
+@router.get("/preferences", response_model=list[PreferenceOut])
+def list_preferences(
+    tenant_id: str,
+    identity_kind: str = Query(pattern="^(EMAIL|PHONE|EXTERNAL)$"),
+    identity_value: str = Query(min_length=1, max_length=320),
+    topic: str | None = Query(default=None, pattern=r"^[a-z0-9][a-z0-9._-]{0,119}$"),
+    channel: str | None = Query(default=None, pattern="^(ALL|EMAIL|SMS|VOICE|SOCIAL)$"),
+    session: Session = Depends(db_session),
+    principal: Principal = Depends(current_principal),
+):
+    authorize(principal, tenant_id, "foundation.preference.read")
+    tenant_or_404(session, tenant_id)
+    digest, _ = _identity_context(session, tenant_id, identity_kind, identity_value)
+    statement = select(Preference).where(
+        Preference.tenant_id == tenant_id,
+        Preference.identity_hash == digest,
+    )
+    if topic is not None:
+        statement = statement.where(Preference.topic == topic)
+    if channel is not None:
+        statement = statement.where(Preference.channel == channel)
+    rows = session.scalars(statement.order_by(Preference.topic, Preference.channel)).all()
+    return [preference_out(row) for row in rows]
+
+
+@router.get("/preferences/{preference_id}", response_model=PreferenceOut)
+def get_preference(
+    tenant_id: str,
+    preference_id: str,
+    session: Session = Depends(db_session),
+    principal: Principal = Depends(current_principal),
+):
+    authorize(principal, tenant_id, "foundation.preference.read")
+    item = session.scalar(
+        select(Preference).where(Preference.tenant_id == tenant_id, Preference.id == preference_id)
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="preference_not_found")
+    return preference_out(item)
 
 
 @router.get("/effective", response_model=EffectivePreferenceOut)

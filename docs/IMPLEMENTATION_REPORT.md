@@ -4,25 +4,27 @@ Date: 2026-08-30
 
 ## Result
 
-The initial Foundation Suite API and database are implemented. The source is
+The complete Foundation Suite v1 authority API, database lifecycles, URL
+catalogue, and business state machines are implemented. The source is
 production-oriented and fail-closed, but deployment and authority migration are
 not authorized.
 
 ## Evidence
 
-- SQLite API suite: `21 passed, 1 PostgreSQL-only test skipped`
-- PostgreSQL 17.6 migration and API suite: `22 passed`
+- SQLite API suite: `29 passed, 1 PostgreSQL-only test skipped`
+- PostgreSQL 17.6 migration and API suite: `30 passed`
 - Alembic upgrade/check/downgrade/upgrade: green
 - PostgreSQL append-only trigger: green
-- OpenAPI/event contract conformance: green
+- OpenAPI, event, URL, and source-scope contract conformance: green
+- Route catalogue: 47 application and operational URLs, exact-match tested
 - Ruff and Python compile validation: green
 - Docker Compose configuration: green
 - Local Docker image build: blocked before source compilation by this host's
   invalid Docker Hub credential; independent GitHub container-build CI is
   required and recorded in `docs/BLOCKERS.md`
-- GitHub clean-runner CI: PASS for PostgreSQL migration/tests, Compose
-  validation, and container build in run `33322313703`
-- Validated source commit: `0b8c50c430ee3f1b126ae9fabbbebd720aed016b`
+- GitHub clean-runner v1 CI: PASS for PostgreSQL migration/tests, Compose
+  validation, and container build in run `33324025094`
+- Validated source commit: `e503da00b5bca42d532044bf82331bc76357e37d`
 
 ## Deliberately not performed
 

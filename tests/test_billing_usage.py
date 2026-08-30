@@ -40,10 +40,30 @@ def _subscription(client, headers, tenant_id, account_id):
     return response.json()
 
 
+def _meter(client, headers, tenant_id, suite_code="ENGAGEMENT", meter_code="email.accepted", aggregation="SUM"):
+    response = client.post(
+        f"/v1/tenants/{tenant_id}/billing/meters",
+        json={
+            "suite_code": suite_code,
+            "meter_code": meter_code,
+            "unit": "messages",
+            "aggregation": aggregation,
+        },
+        headers=headers(
+            {"foundation.billing.write"},
+            tenant_id,
+            idem=f"meter-{suite_code}-{meter_code}-{uuid.uuid4()}",
+        ),
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
 def test_usage_is_exactly_once_and_subscription_scoped(client, headers, tenant, db):
     tenant_id = tenant["id"]
     account = _account(client, headers, tenant_id)
     subscription = _subscription(client, headers, tenant_id, account["id"])
+    _meter(client, headers, tenant_id)
     now = datetime.now(timezone.utc)
     usage = {
         "account_id": account["id"],

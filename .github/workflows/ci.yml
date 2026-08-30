@@ -41,9 +41,10 @@ jobs:
       - run: pip install -e '.[dev]'
       - name: Static validation
         run: |
-          ruff check app tests alembic
-          python -m compileall -q app tests alembic
+          ruff check app tests alembic scripts
+          python -m compileall -q app tests alembic scripts
           python scripts/export_openapi.py --check
+          python scripts/export_api_catalogue.py --check
       - name: Migration validation
         run: |
           export FOUNDATION_JWT_PUBLIC_KEY="unused-in-migration"

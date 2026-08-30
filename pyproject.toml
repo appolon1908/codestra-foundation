@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codestra-foundation"
-version = "0.1.0"
+version = "1.0.0"
 description = "Codestra Foundation Suite for shared tenant, identity, consent, billing, usage, and entitlement authority"
 requires-python = ">=3.10"
 dependencies = [
