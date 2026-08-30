@@ -22,8 +22,9 @@ not authorized.
 - Local Docker image build: blocked before source compilation by this host's
   invalid Docker Hub credential; independent GitHub container-build CI is
   required and recorded in `docs/BLOCKERS.md`
-- Previous GitHub clean-runner baseline CI: PASS in run `33322374292`
-- This v1 completion branch requires a new clean-runner result after push
+- GitHub clean-runner v1 CI: PASS for PostgreSQL migration/tests, Compose
+  validation, and container build in run `33324025094`
+- Validated source commit: `e503da00b5bca42d532044bf82331bc76357e37d`
 
 ## Deliberately not performed
 
