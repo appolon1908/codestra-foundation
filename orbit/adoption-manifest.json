@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "2.0.0",
+  "repository": "appolon1908-hue/codestra-foundation",
+  "classification": "backend-api",
+  "targetBranch": "codex/codestra-orbit-v2-codestra-foundation",
+  "adoptionMode": "contract-only",
+  "domain": null,
+  "domainStatus": "not-applicable",
+  "requirements": {
+    "canonicalIssuer": true,
+    "backendAuthorization": true,
+    "tenantIsolation": true,
+    "sameOriginSessionContractWhenOwned": true,
+    "brandContentAssetFooterContractsWhenOwned": true,
+    "domainContract": true,
+    "audit": true,
+    "rollback": true,
+    "noFabricatedBrowserUi": true
+  },
+  "status": "branch-created",
+  "blockers": [
+    "SDK-repository pull request 75 must complete protected review before shared Orbit contracts are promoted.",
+    "Define this service's exact identity, tenant, authorization, content, asset, footer, domain, audit, release, and rollback authority before API implementation.",
+    "Implement same-origin browser-session endpoints only if this repository is selected as their canonical authority; do not add a presentation shell."
+  ]
+}
