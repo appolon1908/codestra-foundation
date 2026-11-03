@@ -78,3 +78,7 @@ alembic check
 See [architecture](docs/ARCHITECTURE.md), [data model](docs/DATA_MODEL.md),
 [security](docs/SECURITY.md), [Klyrow migration](docs/KLYROW_MIGRATION.md), and
 [production gates](docs/PRODUCTION_GATES.md).
+
+## Governance Git hooks
+
+Enable the shared pre-push checks from your approved workstation using the [hook setup and lease instructions](docs/governance-git-hooks.md). Activation is explicit for each clone; existing CI and publication requirements still apply.
